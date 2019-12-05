@@ -1,0 +1,920 @@
+/*
+Deadpool
+Cameron Harrison
+Simple dodge game
+Updates 
+V 1.0 initial product just deadpool
+V 1.1 added movement/ jumping
+V 1.1.1 Changed movement to stop moving after key release
+V 1.1.2 fixed bug with jumping. Added walls, a floor, and a roof to stop player from leaving the level
+V 1.2 Added sword
+V 1.2.1 Added ability to pull out sword
+V 1.2.2 Fixed sword so it moves with Deadpool and turns in the opposite direction of movement
+V 1.2.3 Removed ability to pull out sword, due to incompatibility with deadpool turning (this may be re added if i can mess around with it and get it working)
+V 2 added meteor design (may change depending on what game i decide) 
+V 2.1 re added sword pull out
+V 2.1.1 fixed sword bugs
+v 2.2 added 5 meteors, meteors now fall, meteors start a position way above the game than they loop once they hit the floor, added score variable that triggers every loop
+V 2.2.1 changed meteors to push arrays to easily change the amount of meteors falling (mr.R's code)
+V 2.3 meteors now change size and speed
+V 2.4 added ground, cloud, and the sun
+V 2.5 added health bar
+V 2.6 added main menu
+V 2.6.1 added option menu
+V 2.6.2 added options to the option menu (difficulty)
+V 2.7 added Game Over Screen
+V 2.7.1 added button to return to main menu from game over screen
+V 2.7.2 fixed various bugs involving buttons
+V 2.8 fixed various bugs
+V 3.0 added hit boxs(mr.R)
+V 3.1 fixed healh bar and hit box bugs
+V 3.2 added invalid game state screen
+V 3.3 added hit sounds
+V 4.0 added 2 types of progression (Number of meteors and speed) **Removed due to bugs .. to be re added**
+V 4.1 fixed bug causing meteors not to spawn
+V 5.0 added design for falling health
+V 5.1 health now falls
+V 6.0 health function now works giving player full health every ~= 50 meteors or so (if health power up is touched)
+V 6.1 health is now capped at 100
+V 6.2 removed progression due to bugs
+V 6.3 re added speed portion of the progression 
+V 6.4 high score added
+V 6.5 added random meteor size every cycle
+V 7.0 added shield power up
+V 7.1 added spiining, falling coin
+V 7.2 various bug fixes
+V 8.0 added more meteors as user progresses through game
+V 8.1 add instruction phase
+
+TODO;
+re balence power ups
+*/
+
+// Variables
+
+// General variables
+var score = 0;
+var highScore;
+var gameState = 0;
+var options = 0;
+var startCol = color(15, 181, 0);
+var insCol = color(15, 181, 0);
+var optionCol = color(15,181,0);
+var optionsCol = [color(15,181,0), color(15,181,0), color(15,181,0), color(15,181,0), color(15,181,0)];
+var gameOverCol = color(15, 181, 0);
+var backgroundCol = color(69, 176, 209);
+var diff = [4, 6, 8, 10];
+var select;
+var clicked = 0;
+var level = 1;
+
+// Deadpool variables
+var xPos = 200;
+var yPos = height-95;
+var mainBody = 40;
+var jump = 0;
+var xSpeed = 0;
+var ySpeed = 0;
+var hp = 100;
+
+// Sword variables
+var swordRotate = 135;
+var swordUp = 0;
+var swordLeft = 0;
+var swordFlip = [50, -30];
+var left = 0;
+var right = 0;
+
+// Walls, roof, and floor variables (char prefix because floor is predefined) 
+var charFloor = height-95;
+var charRoof = height-195;
+var charWalls = [0, 360];
+
+// Meteor/moving objects variables
+var numMeteors = 6;
+var addMeteors = 0;
+var meteorX = [];
+var meteorY = [];
+var meteorSize= [];
+var maxSpeed = 6;
+var meteorSpeed = random(4, maxSpeed);
+var orangeC = color(204, 95, 0);
+var redC = color(245, 12, 12);
+var mSpeed = [];
+var maxSize = 200;
+var mSize = 125;
+
+// Falling Health variables
+var healthX = 100;
+var healthY = 100;
+var healthSize = 75;
+var healthSpeed = 9;
+
+// Shield Variables
+var shieldX = 100;
+var shieldY = 100;
+var shieldSize = 75;
+var shieldTimer = 0;
+ 
+// Coin Variables
+var coinX = 200;
+var coinY = 200;
+var cSize = 50;
+var coinSize = 50;
+var coinSpeed = 8;
+var spin = 0;
+var numCoins = 0;
+
+// sword function
+var drawSword = function(x, y, s){
+    rectMode(CENTER);
+    pushMatrix();
+    translate(x, y);
+    rotate(swordRotate);
+    fill(0);
+    
+    // handle
+    rect(-40+swordUp+swordFlip[0], mainBody*0.95-swordUp+swordFlip[1]+swordLeft, mainBody*0.1, mainBody*0.5);
+    
+    // blade
+    fill(194, 179, 179);
+    rect(-40+swordUp+swordFlip[0], mainBody*-0.25-swordUp+swordFlip[1]+swordLeft, mainBody*0.2, mainBody*2, mainBody*0.8);
+    popMatrix();
+    rectMode(CORNER);
+};
+
+// DeadPool function
+var drawDeadpool = function (xPos, yPos, mainBody) {
+    strokeWeight(mainBody/25);
+    stroke(0, 0, 0);
+    rectMode(CENTER);
+    fill(0, 0, 0);
+    
+    //sword
+    drawSword(xPos,yPos, mainBody);
+    
+    // shorts
+    fill(0, 0, 0);
+    rect(xPos+mainBody*0.02, yPos+mainBody*1.10, mainBody*0.95, mainBody*0.60, mainBody*0.15);
+    // Main portion of the body (red)
+    fill(255, 0, 0);
+    rect(xPos, yPos, mainBody, mainBody*1.25, mainBody*0.15);
+    
+    //head
+    ellipse(xPos+mainBody*0.50, yPos-mainBody*0.20, mainBody*1.25, mainBody);
+    fill(0, 0, 0);
+    
+    // side portions of the main body (black)
+    rect(xPos, yPos+mainBody*0.55, mainBody*0.2, mainBody*0.4); // left
+    rect(xPos+mainBody*0.80, yPos+mainBody*0.55, mainBody*0.2, mainBody*0.4); // right
+    
+    // black under eyes
+    // left
+    fill(0, 0, 0);
+    beginShape();
+    vertex(xPos, yPos);
+    vertex (xPos, yPos-mainBody*0.45);
+    vertex (xPos+mainBody*0.47, yPos-mainBody*0.26);
+    vertex (xPos+mainBody*0.40, yPos+mainBody*0.10);
+    endShape();
+    
+    // right
+    beginShape();
+    vertex(xPos+mainBody, yPos);
+    vertex (xPos+mainBody*0.60, yPos+mainBody*0.10);
+    vertex (xPos+mainBody*0.53, yPos-mainBody*0.26);
+    vertex (xPos+mainBody, yPos-mainBody*0.45);
+    endShape();
+    
+    //eyes
+    fill(255, 255, 255);
+    // left
+    ellipse(xPos+mainBody*0.22, yPos-mainBody*0.15, mainBody*0.35, mainBody*0.35);
+    // right
+    ellipse(xPos+mainBody*0.78, yPos-mainBody*0.15, mainBody*0.35, mainBody*0.35);
+    
+    // legs
+    // left
+    fill(255, 0, 0);
+    rect(xPos, yPos+mainBody*1.60, mainBody*0.50, mainBody*0.75, mainBody*0.10);
+    // right
+    rect(xPos+mainBody*0.50, yPos+mainBody*1.6, mainBody*0.50, mainBody*0.75, mainBody*0.10);
+    
+    // Deadpool Logo
+    noStroke();
+    fill(0, 0, 0);
+    ellipse(xPos+mainBody*0.50, yPos+mainBody*1.22, mainBody*0.15, mainBody*0.15);
+    fill(255, 255, 255);
+    ellipse(xPos+mainBody*0.46, yPos+mainBody*1.19, mainBody*0.05, mainBody*0.06);
+    ellipse(xPos+mainBody*0.54, yPos+mainBody*1.19, mainBody*0.05, mainBody*0.06);
+    stroke(0, 0, 0);
+    fill(0, 200, 255, 150);
+    if(shieldTimer > 1){
+        ellipse(xPos+mainBody-20, yPos+mainBody-40, mainBody+25, mainBody+25);
+    }
+    };
+
+// falling objects function
+var drawMeteor = function(meteorX, meteorY, meteorSize){
+    strokeWeight(3);
+    
+    // main portion of meteor
+    fill(71, 41, 41);
+    ellipse (meteorX+meteorSize, meteorY+meteorSize, meteorSize*0.4, meteorSize*0.4);
+    
+    // circles on meteor
+    ellipse(meteorX+meteorSize*1.09, meteorY+meteorSize*1.07, meteorSize*0.1, meteorSize*0.1);
+    ellipse(meteorX+meteorSize*0.93, meteorY+meteorSize*0.92, meteorSize*0.1, meteorSize*0.1);
+    ellipse(meteorX+meteorSize*0.93, meteorY+meteorSize*1.12, meteorSize*0.1, meteorSize*0.1);
+    
+    // fire
+    stroke(orangeC);
+    fill(blendColor(orangeC, redC, BURN));
+    beginShape();
+    vertex(meteorX+meteorSize*1.11, meteorY+meteorSize*0.83);
+    vertex(meteorX+meteorSize*0.95, meteorY+meteorSize*0.6);
+    vertex(meteorX+meteorSize*0.81, meteorY+meteorSize*0.92);
+    endShape();
+    beginShape();
+    vertex(meteorX+meteorSize*0.97, meteorY+meteorSize*0.83);
+    vertex(meteorX+meteorSize*1.2, meteorY+meteorSize*0.6);
+    vertex(meteorX+meteorSize*1.23, meteorY+meteorSize*0.99);
+    endShape();
+    stroke(0, 0, 0);
+    
+};
+
+// falling health
+var drawHealth = function(healthX, healthY, healthSize){
+    rectMode(CENTER);
+    noStroke();
+    fill(255, 0, 0);
+    rect(healthX+healthSize, healthY+healthSize, healthSize, healthSize/4);
+    rect(healthX+healthSize, healthY+healthSize, healthSize/4, healthSize);
+    rectMode(CORNER);
+};
+
+// Shield Power Up
+var drawShield = function(x, y, s){
+    noStroke();
+    rectMode(CENTER);
+    fill(0, 100, 200);
+    rect(x+s, y+s, s, s/2, s/2);
+    fill(100, 0, 255);
+    ellipse(x+s, y+s, s/2, s/2);
+    textSize(35);
+    fill(0);
+    text("S", x+s*0.84, y+s*0.84, 300, 300);
+    rectMode(CORNER);
+};
+
+// Coins
+var drawCoin = function(coinX, coinY, coinSize, cSize){
+    fill(247, 255, 0);
+    ellipse(coinX, coinY, coinSize, cSize);
+    ellipse(coinX, coinY, coinSize/2, cSize/2); 
+};
+
+var rainCoins = function(){
+    for (var counter = 0; counter < 20; counter = counter + 1){
+        coinX[counter] = random(50, 350);
+        //!initial y location is off the screen so they get randomized
+        coinY[counter] = -height-250;
+    } 
+};
+
+// Movement
+keyPressed = function(){
+    
+    // right movement and turning of sword when movement in the other direction
+    if(keyCode === RIGHT){
+    xSpeed=5;
+        if(swordUp<1){
+            swordRotate = 135;
+            swordFlip[0] = 50;
+            swordFlip[1] = -30;
+            right = 1;
+            left = 0;
+        }
+        if (yPos<=height-150){
+            ySpeed=5;
+        }
+    }
+    
+    // left movement and turning of sword when movement in the other direction
+        else if( keyCode === LEFT){
+        xSpeed=-5;
+    if(swordUp<1){
+        swordRotate = -135;
+        swordFlip[0]=0;
+        swordFlip[1]=0;
+        left = 1;
+        right = 0;
+    }
+    if (yPos<=height-150){
+            ySpeed=5;
+        }
+    }
+    
+    // jumping
+        else if(keyCode === UP){
+            if(yPos>=height-95){
+                ySpeed=-5;
+        }
+            else if (yPos<=height-100){
+                ySpeed=5;
+            }
+}
+};
+keyReleased = function(){
+    
+    // lat movement
+    if (keyCode === RIGHT || keyCode === LEFT) {
+     xSpeed=0;
+     if (yPos<=height-100){
+        ySpeed=5;
+        }
+    }
+    
+    // jumping
+        else if (keyCode === UP) {
+         ySpeed=5;
+        }
+};
+
+// main main/options buttons, and sword flips (mouse release triggers all affects of buttons including game start and meteors)
+mousePressed = function(){
+    
+    //instruction phase
+    if(gameState === -2){
+        // Back
+        if(mouseX>150 && mouseX<250){
+            if(mouseY>300 && mouseY<340){
+                optionsCol[4] = color(28, 77, 0);
+            }
+        }   
+    }
+    
+    // game over
+    if(gameState === 2){
+       if(mouseX>132 && mouseX<282){
+            if(mouseY>300 && mouseY<350){
+                gameOverCol =  color(28, 77, 0);  
+            }
+       }
+    }
+    if(gameState === 0){
+        
+        //start
+        if(mouseX>138 && mouseX<263){
+            if(mouseY>height-400 && mouseY<height-325){
+                startCol = color(28, 77, 0);
+            }
+        }
+        
+        //options
+        if(mouseX>138 && mouseX<263){
+            if(mouseY>(height/2)+25 && mouseY<(height/2)+100){
+                optionCol = color(28, 77, 0);
+            }
+        }
+        // instructions
+        if(mouseX>0 && mouseX<75){
+            if(mouseY>0 && mouseY<75){
+                insCol = color(28, 77, 0);
+            }
+        }
+    }
+    if(options === 1){
+        
+        // Easy
+        if(mouseX>10 && mouseX<85){
+            if(mouseY>175 && mouseY<225){
+                optionsCol[0] = color(28, 77, 0);  
+            }
+        }
+        
+        // Medium
+        if(mouseX>110 && mouseX<185){
+            if(mouseY>175 && mouseY<225){
+                optionsCol[1] = color(28, 77, 0);  
+            }
+        }
+        
+        // Hard
+        if(mouseX>210 && mouseX<285){
+            if(mouseY>175 && mouseY<225){
+                optionsCol[2] = color(28, 77, 0);  
+            }
+        }
+        
+        // Xtreme
+        if(mouseX>310 && mouseX<385){
+            if(mouseY>175 && mouseY<225){
+                optionsCol[3] = color(28, 77, 0);  
+            }
+        }
+        
+        // Back
+        if(mouseX>150 && mouseX<250){
+            if(mouseY>300 && mouseY<340){
+                optionsCol[4] = color(28, 77, 0);  
+            }
+        }
+    }
+    
+    // to raise/lower sword
+    if(left === 1){
+        swordUp = 77;
+        swordLeft = 10;
+        swordRotate = 45;
+    }
+        else if(right === 1 || left === 0 && right === 0){
+            swordUp = 30;
+            swordRotate = 45;
+        }
+    
+};
+mouseReleased = function(){
+    
+    //instruction phase
+    if(gameState === -2){
+        // Back
+        if(mouseX>150 && mouseX<250){
+            if(mouseY>300 && mouseY<340){
+                options = 0;
+                gameState = 0;
+                insCol = color(15,181,0);
+                optionsCol[4] = color(15,181,0);
+            }
+        }   
+    }
+    
+    // game over
+    if(gameState === 2){
+       if(mouseX>132 && mouseX<282){
+            if(mouseY>300 && mouseY<340){
+                gameState = 0;
+                hp = 100;
+                numCoins = 0;
+                level = 0;
+                startCol = color(15,181,0);
+                optionCol = color(15,181,0);
+                optionsCol[4] = color(15,181,0);
+                gameOverCol = color(15,181,0);
+            }
+       }
+    }
+    if(gameState === 0){
+        
+        // start
+        if(mouseX>138 && mouseX<263){
+            if(mouseY>height-400 && mouseY<height-325){
+                gameState++;
+                maxSpeed = 6;
+                if(clicked === 1){
+                    numMeteors = diff[select];
+                }
+                // drawMeteor
+                for (var myCounter = 0; myCounter < numMeteors; myCounter = myCounter + 1){
+                    meteorX[myCounter] = random(50, 350);
+                    //!initial y location is off the screen so they get randomized
+                    meteorY[myCounter] = random(-200, -1000);
+                    mSpeed[myCounter] = meteorSpeed;
+                    meteorSize[myCounter] = mSize;
+                    hp = 100;
+                    score = 0;
+                }
+                healthY = -1000;
+                shieldY = -1200;
+                coinX = -2500;
+                addMeteors = 0;
+                frameCount = 0;
+                level = 1;
+            }
+        }
+        
+        //options
+         if(mouseX>138 && mouseX<263){
+            if(mouseY>(height/2)+25 && mouseY<(height/2)+100){
+                gameState = -1;
+                options = 1;
+            }
+        }
+        //instructions
+         if(mouseX>0 && mouseX<75){
+            if(mouseY>0 && mouseY<75){
+                gameState = -2;
+            } 
+        }
+    }
+    if(options === 1){
+        
+        // Easy
+        if(mouseX>10 && mouseX<85){
+            if(mouseY>175 && mouseY<225){
+                numMeteors = 6;
+                optionsCol[1] = color(15,181,0);
+                optionsCol[2] = color(15,181,0);
+                optionsCol[3] = color(15,181,0);
+                select = 0;
+                clicked = 1;
+            }
+        }
+        
+        // Medium
+        if(mouseX>110 && mouseX<185){
+            if(mouseY>175 && mouseY<225){
+                numMeteors = 8;
+                optionsCol[0] = color(15,181,0);
+                optionsCol[2] = color(15,181,0);
+                optionsCol[3] = color(15,181,0);
+                select = 1;
+                clicked = 1;
+            }
+        }
+        
+        // Hard
+        if(mouseX>210 && mouseX<285){
+            if(mouseY>175 && mouseY<225){
+                numMeteors = 10;
+                optionsCol[0] = color(15,181,0);
+                optionsCol[1] = color(15,181,0);
+                optionsCol[3] = color(15,181,0);
+                select = 2;
+                clicked = 1;
+            }
+        }
+        
+        // Xtreme
+        if(mouseX>310 && mouseX<385){
+            if(mouseY>175 && mouseY<225){
+                numMeteors = 12;
+                optionsCol[0] = color(15,181,0);
+                optionsCol[1] = color(15,181,0);
+                optionsCol[2] = color(15,181,0);
+                select = 3;
+                clicked = 1;
+            }
+        }
+        
+        // Back
+        if(mouseX>150 && mouseX<250){
+            if(mouseY>300 && mouseY<340){
+                gameState = 0;
+                options = 0;
+                insCol = color(15,181,0);
+                optionCol = color(15,181,0);
+                optionsCol[4] = color(15,181,0);
+            }
+        }
+    }
+    
+    // to raise/lower sword
+    swordUp = 0; 
+    if(right === 1 || right === 0 && left === 0){
+        swordRotate = 135;
+    }
+        else if (left === 1){
+            swordLeft = 0;
+            swordRotate = -135;   
+        }
+};
+
+// hit detection (mr.R)
+var detectOver = function(x1, y1,s1, x2, y2, s2){
+    var distance = dist(x1, y1, x2, y2);
+    var bothRad = (s1+s2)*0.5;//this is the sum of both radii
+    return distance < bothRad;
+};
+
+// general repeat functions and char walls/roof/floor
+draw = function() {
+    background(backgroundCol);
+    shieldTimer--;
+    // instructions
+    if(gameState === -2){
+        fill(0);
+        textSize(30);
+        text("You must dodge falling meteors, and collect coins. Two power ups will fall to help you (health, and shield).", 50, 50, 300, 300);
+        fill(optionsCol[4]);
+        rect(150, 300, 100, 40);
+        fill(0);
+        text("Back", 167, 308, 150, 150);
+    }
+    // game over
+    if(hp < 1){
+        gameState = 2;
+        if(score > highScore){
+            highScore = score;   
+        }
+    }
+    if(gameState === 2){
+        textSize(40);
+        fill(0);
+        text("Game Over", 150, 150, 100, 100);
+        fill(gameOverCol);
+        rect(132, 300, 150, 50);
+        fill(0);
+        textSize(25);
+        text("Main Menu", 145, 316 , 150, 150);
+    }
+    
+    // main menu
+    if(gameState === 0){
+        fill(startCol);
+        rect(138, height-400, 125, 75);
+        fill(0, 0, 0);
+        textSize(35);
+        text("Start", 160, height-375, 150, 100);
+        fill(optionCol);
+        rect(138, height/2, 125, 75);
+        fill(0, 0, 0);
+        textSize(35);
+        text("Options", 140, (height/2)+25, 150, 100);
+        fill(insCol);
+        rect(0, 0, 75, 75);
+        fill(0);
+        textSize(35);
+        text("Ins", 15, 20, 150, 100);
+        fill(0);
+        textSize(50);
+        text("Deadpool", 95, 160);
+        // high score
+        //text("High Score", 100, 300, 300, 300);
+        //text(highScore, 100, 350, 300, 300);
+    }
+    
+    // options menu
+    if(options === 1){
+        rectMode(CORNER);
+        fill(optionsCol[0]);
+        rect(10, 175, 75, 50);
+        fill(optionsCol[1]);
+        rect(110, 175, 75, 50);
+        fill(optionsCol[2]);
+        rect(210, 175, 75, 50);
+        fill(optionsCol[3]);
+        rect(310, 175, 75, 50);
+        fill(optionsCol[4]);
+        rect(150, 300, 100, 40);
+        textSize(50);
+        fill(0, 0, 0);
+        text("Options", 115, 100, 150, 100);
+        textSize(30);
+        text("Easy", 15, 188, 150, 100);
+        text("Med", 118, 188, 150, 100);
+        text("Hard", 214, 188, 150, 100);
+        textSize(23);
+        text("Xtreme", 310, 192, 150, 100);
+        textSize(30);
+        text("Back", 167, 308, 150, 150);
+    }
+    
+    // in game
+    if(gameState === 1){
+        noStroke();
+        
+        // the sun
+        fill(255, 213, 0);
+        ellipse(380, 20, 200, 200);
+        
+        // clouds
+        fill(255, 255, 255);
+        ellipse(269, 100, 126, 97);
+        ellipse(327, 100, 70, 60);
+        ellipse(213, 100, 70, 60);
+        
+        // the ground
+        fill(47, 156, 28);
+        rect(0, height-30, 400, 40);
+        stroke(0, 0, 0);
+        
+        // score board
+        rect(320, 10, 75, 50);
+        textMode(CENTER);
+        textSize(28);
+        fill(0, 0, 0);
+        text("Level", 320, 11, 100, 100);
+        text(level, 325, 35, 100, 100);
+        fill(47, 156, 23);
+        
+        // coins
+        rect(320, 70, 75, 50);
+        textMode(CENTER);
+        textSize(28);
+        fill(0, 0, 0);
+        text("Coins", 320, 71, 100, 100);
+        text(numCoins, width-75, 95, 100, 100);
+        fill(47, 156, 23);
+        
+        // colour of health bar dependant on health
+        if(hp === 100){
+            fill(47, 156, 23);
+        }
+            else if(hp >= 80 && hp < 100){
+                fill(173, 232, 12);
+            }
+                else if(hp >= 60 && hp < 80){
+                    fill(247, 255, 0);
+                }
+                    else if(hp >= 30 && hp < 60){
+                        fill(255, 102, 0);
+                    }
+                        else if(hp <= 30){
+                            fill(255, 0, 0);
+                        }
+                        
+        // health bar. Size and colour dependant on hp
+        rect(20, 100, 40, 4*hp);
+        
+        // player movement
+        xPos += xSpeed;
+        yPos += ySpeed;
+        
+        // falling health
+        healthY += healthSpeed;
+        
+        // Shield
+        shieldY += healthSpeed;
+        
+        // coin
+        coinY += coinSpeed;
+        
+        for (var counter = 0; counter < 20; counter = counter + 1){
+            coinY[counter] += coinSpeed;
+            if(detectOver(xPos+20, yPos, mainBody+10, coinX[counter]+125,  coinY[counter]+125, coinSize)){
+                numCoins++;
+                playSound(getSound("rpg/coin-jingle"));
+                coinY[counter] = 2500;  
+            }
+        } 
+        
+        if(spin === 0){
+        coinSize--;
+            if(coinSize < -49){
+                spin = 1;
+                
+            }
+        }
+        if(spin === 1){
+        coinSize++;
+            if(coinSize > 49){
+                spin = 0;
+            }
+        }
+        if(frameCount%(600*(level/2)) === 0){
+            level++;
+            maxSpeed += 0.05;
+        }
+        if(frameCount%500 === 0){
+            rainCoins();  
+        }
+        //resets meteor/ hit detection
+        for (var myCounter = 0; myCounter < numMeteors; myCounter = myCounter + 1){
+            drawMeteor(meteorX[myCounter], meteorY[myCounter], meteorSize[myCounter]);
+            // hit detection
+            if (detectOver(xPos+20, yPos, mainBody+10, meteorX[myCounter]+125,  meteorY[myCounter]+125, meteorSize[myCounter]-75) || detectOver(xPos+20, yPos+60, mainBody+10, meteorX[myCounter]+130,  meteorY[myCounter]+125, meteorSize[myCounter]-75)){
+                if(shieldTimer < 0){
+                    hp--;
+                    playSound(getSound("rpg/hit-thud"));
+                }
+            }
+            ellipse(xPos+20, yPos, mainBody+10, mainBody+10); 
+                meteorY[myCounter] += mSpeed[myCounter];
+                if (meteorY[myCounter] > height + meteorSize[myCounter]){
+                    //move them to the top
+                    meteorY[myCounter] = -height;
+                    //get a random x, and speed location
+                    meteorX[myCounter] = random(-50, 250);
+                    mSpeed[myCounter] = meteorSpeed;
+                    meteorSize[myCounter] = mSize;
+                    score++;
+                }
+            if(score === 50){
+                    addMeteors = 1; 
+                    for (var i = 0; i < addMeteors; i++){
+                        meteorX[i] = random(-50, 200);
+                        //!initial y location is off the screen so they get randomized
+                        meteorY[i] = random(-200, -1000);
+                        mSpeed[i] = meteorSpeed;
+                        meteorSize[i] = mSize;
+                    }
+                }
+                if(score === 100){
+                    addMeteors = 3; 
+                    for (var l = 0; l < addMeteors; l++) {
+                        meteorX[l] = random(-50, 200);
+                        //!initial y location is off the screen so they get randomized
+                        meteorY[l] = random(-200, -1000);
+                        mSpeed[l] = meteorSpeed; 
+                        meteorSize[l] = mSize;
+                    }
+                }
+        }
+        //resets meteor/ hit detection for second group of added meteors
+        for (var l = 0; l < addMeteors; l++){
+            drawMeteor(meteorX[l], meteorY[l], meteorSize[l]);
+            // hit detection
+            if (detectOver(xPos+20, yPos, mainBody+10, meteorX[l]+100,  meteorY[l]+100, meteorSize[l]-55) || detectOver(xPos+20, yPos+60, mainBody+10, meteorX[l]+100,  meteorY[l]+100, meteorSize[l]-55)){
+                if(shieldTimer < 0){
+                    hp--;
+                    playSound(getSound("rpg/hit-thud"));
+                }
+            }
+                meteorY[l] += mSpeed[l];
+                if (meteorY[l] > height + meteorSize[l]){
+                    //move them to the top
+                    meteorY[l] = -300;
+                    //get a random x, and speed location
+                    meteorX[l] = random(-50, 250);
+                    mSpeed[l] = meteorSpeed;
+                    meteorSize[l] = mSize;
+                    score++;
+                }
+        }
+                //resets meteor/ hit detection for first group of added meteors
+        for (var i = 0; i < addMeteors; i++){
+            drawMeteor(meteorX[i], meteorY[i], meteorSize[i]);
+            // hit detection
+            if (detectOver(xPos+20, yPos, mainBody+10, meteorX[i]+100,  meteorY[i]+100, meteorSize[i]-55) || detectOver(xPos+20, yPos+60, mainBody+10, meteorX[i]+100,  meteorY[i]+100, meteorSize[i]-55)){
+                if(shieldTimer < 0){
+                    hp--;
+                    playSound(getSound("rpg/hit-thud"));
+                }
+            }
+                meteorY[i] += mSpeed[i];
+                if (meteorY[i] > height + meteorSize[i]){
+                    //move them to the top
+                    meteorY[i] = -300;
+                    //get a random x, and speed location
+                    meteorX[i] = random(-50, 250);
+                    mSpeed[i] = meteorSpeed;
+                    meteorSize[i] = mSize;
+                    score++;
+                }
+        }
+        if(detectOver(xPos+20, yPos, mainBody+15, healthX+75, healthY+75, healthSize)){
+            hp += 5;
+        }
+        if(detectOver(xPos+20, yPos, mainBody+15, shieldX+75, shieldY+75, shieldSize-20)){
+            shieldTimer = 300;
+        }
+        if(detectOver(xPos+20, yPos, mainBody+15, coinX, coinY, cSize)){
+            numCoins++;
+            playSound(getSound("rpg/coin-jingle"));
+            coinY = -2500;
+            coinX = random(50, 350);
+        }
+         if(hp > 100){
+            hp = 100;   
+        }
+        if(healthY > height+healthSize){
+            healthY = (-200*level)-height*3;
+            healthX = random(50, 325);
+        }
+        if(shieldY > height+shieldSize){
+            shieldY = (-200*level)-height*3;
+            shieldX = random(50, 325);
+        }
+        if(shieldTimer > 0){
+            fill(0, 217, 255);
+            rect(25, height-25, 1*shieldTimer, 25);
+        }
+        if(coinY > height+coinSize){
+            coinY = -2500;
+            coinX = random(50, 350);
+        }
+        if(yPos>charFloor){
+            ySpeed = 0;
+            yPos = height-95;
+        }
+        if(yPos<charRoof){
+            ySpeed = 0;
+            yPos = height-190;
+        }
+        if(xPos<charWalls[0]){
+            xSpeed = 0;
+            xPos = 0;
+        }
+        if(xPos>charWalls[1]){
+            xSpeed = 0;
+            xPos = width-40;
+        }
+        drawHealth(healthX, healthY, healthSize);
+        drawShield(shieldX, shieldY, shieldSize);
+        drawDeadpool (xPos, yPos, mainBody);
+        drawCoin(coinX, coinY, coinSize, cSize);
+        fill(255, 255, 0, 100);
+        
+    }
+    
+    // if user somehow breaks the game state
+    else if(gameState < -2 || gameState > 2){
+        image(getImage("creatures/OhNoes"), (width/2)-50, (height/2)-50, 100, 100);
+        fill(0, 0, 0);
+        textSize(20);
+        text("Oh Noes! Invalid Game State!(" + gameState + ")" , 75, (height/2)+55, 300, 300);
+        text("Please Restart", 135, (height/2)+80, 300, 300);
+    }
+  };
